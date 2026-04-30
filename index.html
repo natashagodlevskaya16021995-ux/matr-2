@@ -17,9 +17,9 @@
       --brown: #311a11; 
       
       --shadow: 0 18px 55px rgba(0,0,0,.4);
-      --open-heart: clamp(150px, 22vmin, 190px);
-      --note-w: min(240px, calc(100vw - 60px)); 
-      --note-max: 300px;
+      --open-heart: clamp(140px, 20vmin, 170px);
+      --note-w: min(220px, calc(100vw - 40px)); 
+      --note-max: 280px;
       --split-ms: 520ms;
       --note-fade-ms: 220ms;
       --note-move-ms: 260ms;
@@ -247,7 +247,7 @@
       border: 2px solid var(--red-light);
       color: var(--brown);
       box-shadow: var(--shadow);
-      padding: 20px 16px;
+      padding: 16px 12px; /* Компактные отступы */
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -275,33 +275,33 @@
 
     .qText{
       margin:0;
-      font-size: 32px;
+      font-size: 24px; /* Уменьшенный шрифт для компактности в Genially */
       line-height: 1;
       font-weight: 700;
       text-transform: uppercase;
       writing-mode: vertical-rl;
       text-orientation: upright;
-      letter-spacing: 5px; 
+      letter-spacing: 4px; 
       white-space: nowrap;
     }
 
     .letters-board {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px; /* Компактные отступы */
       justify-content: center;
-      margin-top: 20px;
+      margin-top: 15px;
       width: 100%;
     }
 
     .letter-btn {
-      width: 40px;
-      height: 40px;
+      width: 38px;
+      height: 38px;
       border-radius: 8px;
       border: 2px solid var(--red-main);
       background: #fff;
       color: var(--red-dark);
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s ease;
@@ -320,6 +320,7 @@
       transform: scale(0.95);
     }
 
+    /* Возвращен ЗЕЛЕНЫЙ цвет для правильного ответа */
     .letter-btn.correct {
       background: #4caf50;
       border-color: #388e3c;
@@ -395,10 +396,12 @@
       transition: opacity .25s ease;
     }
     .doneOverlay.active{ opacity:1; pointer-events:auto; }
+    
     .dim{
       position:absolute; inset:0;
-      background: rgba(0,0,0,.6);
-      backdrop-filter: blur(5px);
+      /* Светлый фон, без черного экрана */
+      background: rgba(253, 250, 246, 0.5); 
+      backdrop-filter: blur(6px);
     }
     
     .doneCard{
@@ -474,6 +477,7 @@
   </section>
 
   <script>
+    // БАЗА СЛОЖНЫХ СЛОВ (из предоставленного исходника)
     const ALL_WORDS = [
       {word: "тр_щать", ans: ["е"]}, {word: "скр_петь", ans: ["и"]},
       {word: "св_стеть", ans: ["и"]}, {word: "г_лодать", ans: ["о"]},
@@ -621,18 +625,17 @@
       return btn;
     }
 
-    // ИСПРАВЛЕННЫЕ ОТСТУПЫ ДЛЯ GENIALLY
+    /* ИСПРАВЛЕННЫЕ ОТСТУПЫ: Гарантируем место для кнопок внизу */
     function getSafePadding(){
       const vw = field.clientWidth || window.innerWidth;
       const vh = field.clientHeight || window.innerHeight;
 
-      // Оставляем совсем небольшие динамические отступы.
-      // Это не даст алгоритму сжать все элементы в центр на маленьких экранах.
       return {
-        padLeft: Math.max(15, vw * 0.05),
-        padRight: Math.max(15, vw * 0.05),
-        padTop: Math.max(70, vh * 0.12), // Сверху оставляем 70px для счетчика
-        padBottom: Math.max(20, vh * 0.08)
+        padLeft: Math.max(20, vw * 0.05),
+        padRight: Math.max(20, vw * 0.05),
+        padTop: Math.max(110, vh * 0.15),
+        // Увеличенный отступ снизу, чтобы карточка и кнопки точно влезали в Genially
+        padBottom: Math.max(160, vh * 0.20) 
       };
     }
 
@@ -646,7 +649,6 @@
       const pads = getSafePadding();
 
       for(let i=0; i<TARGET_COUNT; i++){
-        // Немного уменьшили максимальный размер для лучшего вида во встраивании
         const size = rand(65, Math.min(95, vw * 0.15)); 
         const btn = buildHeartButton(i, size);
         btn.style.animationDelay = (45 * Math.min(i, 14)) + "ms";
