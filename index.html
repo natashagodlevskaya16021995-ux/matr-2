@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Безударные гласные</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@300;400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      /* Цвета в стиле Матрёшки */
+      --red-main: #d41e24; 
+      --red-light: #e73033;
+      --red-dark: #a11015;
+      --cream: #fdfaf6; 
+      --brown: #311a11; 
+      
+      --shadow: 0 18px 55px rgba(0,0,0,.4);
+      --open-heart: clamp(150px, 22vmin, 190px);
+      --note-w: min(240px, calc(100vw - 60px)); 
+      --note-max: 300px;
+      --split-ms: 520ms;
+      --note-fade-ms: 220ms;
+      --note-move-ms: 260ms;
+    }
+
+    *{box-sizing:border-box;}
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family:"Roboto Condensed", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      overflow:hidden;
+      background:#0b0820;
+      color:#fff;
+      touch-action: manipulation;
+    }
+
+    .bg{
+      position:fixed; 
+      inset: -50px; 
+      background: url("images/bg.png") center/cover no-repeat;
+      filter: blur(12px);
+      transform: scale(1.02);
+      z-index: 0;
+    }
+    .bg::after{
+      content:"";
+      position:absolute; inset:0;
+      background: rgba(0,0,0,0.3);
+      pointer-events:none;
+    }
+
+    .counter{
+      position:fixed;
+      top:16px;
+      right:16px;
+      z-index:60;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:999px;
+      background: rgba(253, 250, 246, .9);
+      border: 1px solid var(--red-main);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 20px rgba(0,0,0,.2);
+      user-select:none;
+      font-weight:700;
+      font-size:14px;
+      letter-spacing:.2px;
+      color: var(--brown);
+    }
+    .dot{
+      width:10px;height:10px;border-radius:50%;
+      background: linear-gradient(180deg, var(--red-light), var(--red-main));
+      box-shadow: 0 0 0 4px rgba(212, 30, 36, .2);
+    }
+
+    .screen{
+      position:fixed;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      opacity:0;
+      transform: translateY(10px);
+      pointer-events:none;
+      transition: opacity .45s ease, transform .45s ease;
+      z-index:10;
+    }
+    .screen.active{
+      opacity:1;
+      transform: translateY(0);
+      pointer-events:auto;
+    }
+
+    .startCard{
+      width:min(720px, calc(100vw - 40px));
+      border-radius: 28px;
+      background: var(--cream);
+      border: 2px solid var(--red-main);
+      box-shadow: var(--shadow);
+      padding: 34px 28px;
+      text-align:center;
+      position:relative;
+      overflow:hidden;
+      color: var(--brown);
+    }
+    .startCard::before{
+      content:"";
+      position:absolute; inset:-40%;
+      background:
+        radial-gradient(circle at 30% 30%, rgba(212,30,36,.1), transparent 55%),
+        radial-gradient(circle at 75% 35%, rgba(253,250,246,.5), transparent 55%),
+        radial-gradient(circle at 55% 85%, rgba(161,16,21,.1), transparent 60%);
+      transform: rotate(10deg);
+      pointer-events:none;
+    }
+    .startCard h1{
+      margin:0 0 18px;
+      font-size: clamp(30px, 4.2vw, 38px);
+      position:relative;
+      letter-spacing:.3px;
+      font-weight:700;
+      color: var(--red-dark);
+      text-transform: uppercase;
+    }
+
+    .btn{
+      appearance:none;
+      border:0;
+      cursor:pointer;
+      border-radius:999px;
+      padding:12px 24px;
+      font-size: 18px;
+      font-weight:800;
+      letter-spacing:.3px;
+      transition: transform .15s ease, filter .2s ease;
+      user-select:none;
+      font-family: inherit;
+      outline:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active{ transform: translateY(1px) scale(.99); }
+    
+    .btnPrimary{
+      background: linear-gradient(180deg, var(--red-light), var(--red-main));
+      color:#fff;
+      box-shadow: 0 12px 25px rgba(212, 30, 36, .4);
+    }
+    .btnPrimary:hover{ filter:brightness(1.05); }
+
+    .field{
+      position:fixed;
+      inset:0;
+      z-index:1;
+    }
+
+    .heartBtn{
+      position:absolute;
+      border:0;
+      padding:0;
+      background:transparent;
+      cursor:pointer;
+      opacity:0;
+      transform: translateY(10px) scale(.96);
+      animation: fadeInUp .5s ease forwards;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      outline: none !important;
+      box-shadow: none !important;
+      z-index:2;
+    }
+
+    .field.locked .heartBtn{ pointer-events:none; }
+    .field.locked .heartBtn.open,
+    .field.locked .heartBtn.opening,
+    .field.locked .heartBtn.closing{ pointer-events:auto; }
+
+    .heartBtn.open,
+    .heartBtn.opening,
+    .heartBtn.closing{ z-index:50; }
+
+    @keyframes fadeInUp{
+      to{ opacity:1; transform: translateY(0) scale(1); }
+    }
+
+    .heartImg, .halfImg {
+      background-position: center;
+      background-size: contain;
+      background-repeat: no-repeat;
+    }
+
+    .heartImg{
+      position:relative;
+      z-index:1;
+      width:100%;
+      height:100%;
+      filter: drop-shadow(0 14px 18px rgba(0,0,0,.3));
+      transition: transform .18s ease, filter .18s ease, opacity .12s ease;
+    }
+
+    .heartBtn:hover .heartImg{
+      transform: translateY(-2px) scale(1.02);
+      filter:
+        drop-shadow(0 14px 18px rgba(0,0,0,.3))
+        drop-shadow(0 0 10px rgba(253, 250, 246, .4));
+    }
+    @media (hover:none){
+      .heartBtn:hover .heartImg{ transform:none; }
+    }
+
+    .heartBtn.opening .heartImg,
+    .heartBtn.open .heartImg,
+    .heartBtn.closing .heartImg{
+      opacity:0;
+      pointer-events:none;
+    }
+
+    .heartOpen{
+      position:absolute;
+      inset:0;
+      z-index:2;
+      pointer-events:none;
+      opacity:0;
+      transition: opacity .12s ease;
+    }
+    .heartBtn.opening .heartOpen,
+    .heartBtn.open .heartOpen,
+    .heartBtn.closing .heartOpen{ opacity:1; }
+
+    .openWrap{
+      position:absolute;
+      left:50%;
+      top:50%;
+      transform: translate(-50%,-50%);
+      width: min(var(--note-w), var(--note-max));
+      pointer-events:none;
+      z-index:2;
+    }
+
+    .message{
+      width:100%;
+      border-radius: 16px;
+      background: var(--cream);
+      border: 2px solid var(--red-light);
+      color: var(--brown);
+      box-shadow: var(--shadow);
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align:center;
+      opacity:0;
+      transform: translateY(10px) scale(.975);
+      transition:
+        opacity var(--note-fade-ms) ease,
+        transform var(--note-move-ms) cubic-bezier(.2,.9,.2,1);
+      pointer-events:auto;
+      position:relative;
+      z-index:2;
+    }
+
+    .heartBtn.opening .message,
+    .heartBtn.open .message{
+      opacity:1;
+      transform: translateY(0) scale(1);
+    }
+
+    .heartBtn.closing .message{
+      opacity:0;
+      transform: translateY(10px) scale(.975);
+    }
+
+    .qText{
+      margin:0;
+      font-size: 32px;
+      line-height: 1;
+      font-weight: 700;
+      text-transform: uppercase;
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: 5px; 
+      white-space: nowrap;
+    }
+
+    .letters-board {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 20px;
+      width: 100%;
+    }
+
+    .letter-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 2px solid var(--red-main);
+      background: #fff;
+      color: var(--red-dark);
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+
+    .letter-btn:hover {
+      background: rgba(212, 30, 36, .1);
+    }
+
+    .letter-btn:active {
+      transform: scale(0.95);
+    }
+
+    .letter-btn.correct {
+      background: #4caf50;
+      border-color: #388e3c;
+      color: white;
+      transform: scale(1.1);
+      box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
+    }
+
+    .letter-btn.wrong {
+      background: #f44336;
+      border-color: #d32f2f;
+      color: white;
+      animation: shake 0.3s cubic-bezier(.36,.07,.19,.97) both;
+    }
+
+    @keyframes shake {
+      10%, 90% { transform: translate3d(-2px, 0, 0); }
+      20%, 80% { transform: translate3d(3px, 0, 0); }
+      30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+      40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .half{
+      position:absolute;
+      left:50%;
+      width: var(--open-heart);
+      height: calc(var(--open-heart) / 2);
+      overflow:hidden;
+      z-index:3;
+      filter: drop-shadow(0 18px 22px rgba(0,0,0,.25));
+      will-change: transform, top;
+      transition: transform var(--split-ms) cubic-bezier(.2,.9,.2,1), top var(--split-ms) cubic-bezier(.2,.9,.2,1);
+      pointer-events:none;
+    }
+
+    .half.top { top:50%; transform: translate(-50%, -100%); }
+    .half.bottom { top:50%; transform: translate(-50%, 0); }
+
+    .halfImg{
+      position:absolute;
+      left:0;
+      width: var(--open-heart);
+      height: var(--open-heart);
+    }
+    .half.top .halfImg { top:0; }
+    .half.bottom .halfImg { bottom:0; top:auto; }
+
+    .heartBtn.open .openWrap .half.top,
+    .heartBtn.opening .openWrap .half.top{
+      top:0;
+      transform: translate(-50%, -100%);
+    }
+    .heartBtn.open .openWrap .half.bottom,
+    .heartBtn.opening .openWrap .half.bottom{
+      top:100%;
+      transform: translate(-50%, 0);
+    }
+
+    .heartBtn.closing .openWrap .half.top{
+      top:50%;
+      transform: translate(-50%, -100%);
+    }
+    .heartBtn.closing .openWrap .half.bottom{
+      top:50%;
+      transform: translate(-50%, 0);
+    }
+
+    .doneOverlay{
+      position:fixed; inset:0;
+      z-index:200;
+      opacity:0;
+      pointer-events:none;
+      transition: opacity .25s ease;
+    }
+    .doneOverlay.active{ opacity:1; pointer-events:auto; }
+    .dim{
+      position:absolute; inset:0;
+      background: rgba(0,0,0,.6);
+      backdrop-filter: blur(5px);
+    }
+    
+    .doneCard{
+      position:absolute;
+      left:50%; top:50%;
+      transform: translate(-50%,-50%);
+      width:min(620px, calc(100vw - 40px));
+      border-radius: 28px;
+      background: var(--cream);
+      border: 2px solid var(--red-main);
+      box-shadow: var(--shadow);
+      padding: 30px 22px;
+      text-align:center;
+      overflow:hidden;
+      color: var(--brown);
+    }
+    .doneCard h2 {
+      color: var(--red-dark);
+      margin: 0 0 20px 0;
+    }
+
+    .finImg {
+      display: block;
+      margin: 0 auto 15px auto;
+      width: 140px; 
+      height: auto;
+      animation: swingGlow 3s ease-in-out infinite;
+    }
+
+    @keyframes swingGlow {
+      0% {
+        transform: rotate(-4deg);
+        filter: drop-shadow(0 0 8px rgba(212, 30, 36, 0.3));
+      }
+      50% {
+        transform: rotate(4deg);
+        filter: drop-shadow(0 0 22px rgba(212, 30, 36, 0.8));
+      }
+      100% {
+        transform: rotate(-4deg);
+        filter: drop-shadow(0 0 8px rgba(212, 30, 36, 0.3));
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="bg"></div>
+
+  <div class="counter" aria-live="polite">
+    <span class="dot"></span>
+    <span><span id="doneCount">0</span>/<span id="totalCount">10</span></span>
+  </div>
+
+  <section class="screen active" id="startScreen">
+    <div class="startCard">
+      <h1>Безударные гласные</h1>
+      <button class="btn btnPrimary" id="startBtn">Начать игру</button>
+    </div>
+  </section>
+
+  <section class="screen" id="gameScreen" style="align-items:stretch; justify-content:stretch;">
+    <div class="field" id="field" aria-label="Игровое поле"></div>
+
+    <div class="doneOverlay" id="doneOverlay" aria-hidden="true">
+      <div class="dim"></div>
+      <div class="doneCard">
+        <img src="images/fin.png" alt="Финиш" class="finImg">
+        <h2>Отличная работа!</h2>
+        <button class="btn btnPrimary" id="againBtn">Играть снова</button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    const ALL_WORDS = [
+      {word: "тр_щать", ans: ["е"]}, {word: "скр_петь", ans: ["и"]},
+      {word: "св_стеть", ans: ["и"]}, {word: "г_лодать", ans: ["о"]},
+      {word: "см_шить", ans: ["е"]}, {word: "д_лёкий", ans: ["а"]},
+      {word: "л_дяной", ans: ["е"]}, {word: "гр_зовой", ans: ["о"]},
+      {word: "п_ляна", ans: ["о"]}, {word: "стр_ла", ans: ["е"]},
+      {word: "зв_нок", ans: ["о"]}, {word: "сл_мать", ans: ["о"]},
+      {word: "в_рхушка", ans: ["е"]}, {word: "н_чной", ans: ["о"]},
+      {word: "гл_зной", ans: ["а"]}, {word: "м_сной", ans: ["я"]},
+      {word: "х_дить", ans: ["о"]}, {word: "с_дло", ans: ["е"]},
+      {word: "м_лчать", ans: ["о"]}, {word: "ст_рожить", ans: ["о"]},
+      {word: "д_ржать", ans: ["е"]}, {word: "в_здушный", ans: ["о"]},
+      {word: "ч_рнеть", ans: ["е"]}, {word: "ск_льзить", ans: ["о"]},
+      {word: "л_нивый", ans: ["е"]}, {word: "п_хучий", ans: ["а"]},
+      {word: "к_лючий", ans: ["о"]}, {word: "м_розный", ans: ["о"]},
+      {word: "п_стух", ans: ["а"]}, {word: "л_пить", ans: ["е"]},
+      {word: "пл_сать", ans: ["я"]}, {word: "см_треть", ans: ["о"]},
+      {word: "кр_снеть", ans: ["а"]}, {word: "бл_днеть", ans: ["е"]},
+      {word: "т_мнеть", ans: ["е"]}, {word: "п_стреть", ans: ["е"]}
+    ];
+
+    let CURRENT_QUESTIONS = [];
+
+    const startScreen = document.getElementById('startScreen');
+    const gameScreen  = document.getElementById('gameScreen');
+    const startBtn    = document.getElementById('startBtn');
+    const field = document.getElementById('field');
+    const doneCountEl = document.getElementById('doneCount');
+    const totalCountEl = document.getElementById('totalCount');
+    const doneOverlay = document.getElementById('doneOverlay');
+    const againBtn = document.getElementById('againBtn');
+
+    let openedIndex = null;
+    let openedBtn = null;
+    let completed = new Set();
+    const TARGET_COUNT = 10; 
+
+    function switchScreen(from, to){
+      from.classList.remove('active');
+      to.classList.add('active');
+    }
+
+    function rand(min, max){ return Math.random() * (max - min) + min; }
+    function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+    function updateCounter(){
+      doneCountEl.textContent = String(completed.size);
+      totalCountEl.textContent = String(TARGET_COUNT);
+    }
+
+    function shuffleQuestions() {
+      let shuffled = [...ALL_WORDS].sort(() => 0.5 - Math.random());
+      CURRENT_QUESTIONS = shuffled.slice(0, TARGET_COUNT);
+    }
+
+    function buildHeartButton(index, size){
+      const qData = CURRENT_QUESTIONS[index];
+      const btn = document.createElement('button');
+      btn.className = 'heartBtn';
+      btn.type = 'button';
+      btn.style.width = size + "px";
+      btn.style.height = size + "px";
+
+      const imgVariant = Math.floor(Math.random() * 4) + 1; 
+      const localImageUrl = `images/serd${imgVariant}.png`; 
+
+      const img = document.createElement('div');
+      img.className = 'heartImg';
+      img.style.backgroundImage = `url('${localImageUrl}')`;
+
+      const open = document.createElement('div');
+      open.className = 'heartOpen';
+
+      const wrap = document.createElement('div');
+      wrap.className = 'openWrap';
+
+      const topHalf = document.createElement('div');
+      topHalf.className = 'half top';
+      topHalf.innerHTML = `<div class="halfImg" style="background-image: url('${localImageUrl}')"></div>`;
+
+      const bottomHalf = document.createElement('div');
+      bottomHalf.className = 'half bottom';
+      bottomHalf.innerHTML = `<div class="halfImg" style="background-image: url('${localImageUrl}')"></div>`;
+
+      const msg = document.createElement('div');
+      msg.className = 'message';
+
+      const text = document.createElement('p');
+      text.className = 'qText';
+      text.textContent = qData.word;
+
+      const lettersBoard = document.createElement('div');
+      lettersBoard.className = 'letters-board';
+      
+      const vowels = ['а', 'о', 'и', 'е', 'я'];
+      let isSolved = false;
+
+      vowels.forEach(v => {
+        const letterBtn = document.createElement('button');
+        letterBtn.className = 'letter-btn';
+        letterBtn.textContent = v.toUpperCase();
+        
+        letterBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (isSolved) return;
+
+          if (qData.ans.includes(v)) {
+            isSolved = true;
+            letterBtn.classList.add('correct');
+            text.textContent = qData.word.replace('_', v.toUpperCase());
+            
+            setTimeout(() => {
+              closeHeart();
+            }, 1000);
+
+          } else {
+            letterBtn.classList.remove('wrong');
+            void letterBtn.offsetWidth; 
+            letterBtn.classList.add('wrong');
+            
+            setTimeout(() => {
+              letterBtn.classList.remove('wrong');
+            }, 300);
+          }
+        });
+        lettersBoard.appendChild(letterBtn);
+      });
+
+      msg.appendChild(text);
+      msg.appendChild(lettersBoard);
+
+      wrap.appendChild(topHalf);
+      wrap.appendChild(bottomHalf);
+      wrap.appendChild(msg);
+      open.appendChild(wrap);
+
+      btn.appendChild(img);
+      btn.appendChild(open);
+
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openHeart(index, btn);
+      });
+
+      return btn;
+    }
+
+    // ИСПРАВЛЕННЫЕ ОТСТУПЫ ДЛЯ GENIALLY
+    function getSafePadding(){
+      const vw = field.clientWidth || window.innerWidth;
+      const vh = field.clientHeight || window.innerHeight;
+
+      // Оставляем совсем небольшие динамические отступы.
+      // Это не даст алгоритму сжать все элементы в центр на маленьких экранах.
+      return {
+        padLeft: Math.max(15, vw * 0.05),
+        padRight: Math.max(15, vw * 0.05),
+        padTop: Math.max(70, vh * 0.12), // Сверху оставляем 70px для счетчика
+        padBottom: Math.max(20, vh * 0.08)
+      };
+    }
+
+    function placeHeartsRandomly(){
+      field.innerHTML = "";
+      const placed = [];
+
+      const vw = field.clientWidth || window.innerWidth;
+      const vh = field.clientHeight || window.innerHeight;
+
+      const pads = getSafePadding();
+
+      for(let i=0; i<TARGET_COUNT; i++){
+        // Немного уменьшили максимальный размер для лучшего вида во встраивании
+        const size = rand(65, Math.min(95, vw * 0.15)); 
+        const btn = buildHeartButton(i, size);
+        btn.style.animationDelay = (45 * Math.min(i, 14)) + "ms";
+
+        const maxTries = 1800;
+        let x=0, y=0, ok=false;
+
+        const minX = pads.padLeft;
+        const maxX = Math.max(minX + 10, vw - pads.padRight - size);
+        const minY = pads.padTop;
+        const maxY = Math.max(minY + 10, vh - pads.padBottom - size);
+
+        const rA = size * 0.44;
+        const boxPad = 12;
+
+        for(let t=0;t<maxTries;t++){
+          x = rand(minX, maxX);
+          y = rand(minY, maxY);
+
+          ok = true;
+          const ax = x + size/2, ay = y + size/2;
+
+          for(const p of placed){
+            const bx = p.x + p.s/2, by = p.y + p.s/2;
+            const rB = p.s * 0.44;
+            const d = Math.hypot(ax - bx, ay - by);
+
+            if(d < (rA + rB + boxPad)) { ok = false; break; }
+
+            if(
+              x < p.x + p.s + boxPad &&
+              x + size + boxPad > p.x &&
+              y < p.y + p.s + boxPad &&
+              y + size + boxPad > p.y
+            ){
+              ok = false; break;
+            }
+          }
+          if(ok) break;
+        }
+
+        x = clamp(x, minX, maxX);
+        y = clamp(y, minY, maxY);
+
+        btn.style.left = x + "px";
+        btn.style.top  = y + "px";
+
+        placed.push({x, y, s: size});
+        field.appendChild(btn);
+      }
+    }
+
+    function lockField(){ field.classList.add('locked'); }
+    function unlockField(){ field.classList.remove('locked'); }
+
+    function openHeart(index, btnEl){
+      if(completed.has(index)) return;
+      if(openedBtn) return;
+
+      openedIndex = index;
+      openedBtn = btnEl;
+
+      lockField();
+      btnEl.classList.remove('closing');
+      btnEl.classList.add('opening');
+
+      requestAnimationFrame(() => {
+        btnEl.classList.add('open');
+      });
+    }
+
+    function closeHeart(){
+      if(openedIndex === null || !openedBtn) return;
+
+      const idx = openedIndex;
+      const btnEl = openedBtn;
+
+      btnEl.classList.remove('open');
+      btnEl.classList.remove('opening');
+      btnEl.classList.add('closing');
+
+      const CLOSE_ANIM_MS = 540;
+
+      window.setTimeout(() => {
+        btnEl.style.transition = "opacity .12s ease, transform .12s ease";
+        btnEl.style.opacity = "0";
+        btnEl.style.transform = "scale(.92)";
+        btnEl.style.pointerEvents = "none";
+
+        window.setTimeout(() => btnEl.remove(), 140);
+
+        completed.add(idx);
+        openedIndex = null;
+        openedBtn = null;
+
+        unlockField();
+        updateCounter();
+
+        if(completed.size === TARGET_COUNT){
+          window.setTimeout(() => {
+            doneOverlay.classList.add('active');
+            doneOverlay.setAttribute('aria-hidden','false');
+          }, 160);
+        }
+      }, CLOSE_ANIM_MS);
+    }
+
+    function resetGame(){
+      completed = new Set();
+      openedIndex = null;
+      openedBtn = null;
+      unlockField();
+
+      doneOverlay.classList.remove('active');
+      doneOverlay.setAttribute('aria-hidden','true');
+
+      shuffleQuestions();
+      updateCounter();
+      placeHeartsRandomly();
+    }
+
+    startBtn.addEventListener('click', () => {
+      switchScreen(startScreen, gameScreen);
+      resetGame();
+    });
+
+    againBtn.addEventListener('click', () => resetGame());
+
+    window.addEventListener('resize', () => {
+      if(gameScreen.classList.contains('active') && !openedBtn) placeHeartsRandomly();
+    });
+
+  </script>
+</body>
+</html>
